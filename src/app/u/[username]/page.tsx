@@ -46,28 +46,12 @@ export default function SendMessage() {
   } = useCompletion({
     api: "/api/suggest-messages",
     initialCompletion: initialMessageString,
-    onError : (error) => {
-      toast({
-        title : "Error",
-        description : error.message,
-        variant: "destructive"
-      })
-    }
   });
-  const getSuggestedMessages = () => {
-    if (!completion) return [];
-    try {
-      return parseStringMessages(completion);
-    } catch (error) {
-      console.error("Error parsing messages:", error);
-      return [];
-    }
-  };
 
   const form = useForm<z.infer<typeof messageSchema>>({
     resolver: zodResolver(messageSchema),
   });
-   
+
   const messageContent = form.watch("content");
 
   const handleMessageClick = (message: string) => {
@@ -169,7 +153,7 @@ export default function SendMessage() {
             {error ? (
               <p className="text-red-500">{error.message}</p>
             ) : (
-              getSuggestedMessages().map((message, index) => (
+              parseStringMessages(completion).map((message, index) => (
                 <Button
                   key={index}
                   variant="outline"

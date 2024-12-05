@@ -1,5 +1,6 @@
 "use client";
-import MessageCard  from "@/components/MessageCard";
+
+import MessageCard from "@/components/MessageCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -15,35 +16,52 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AcceptMessageSchema } from "@/schemas/acceptMessageSchema";
 
-
-const UserDashboard = () => {
+function UserDashboard() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isSwtichLoading, setIsSwitchLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSwitchLoading, setIsSwitchLoading] = useState(false);
 
   const { toast } = useToast();
 
-  const handleDeleteMessage = (messageId: string) => {
-    setMessages(messages.filter((message) => message._id !== messageId));
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const response = await axios.delete<ApiResponse>(`/api/delete-message/${messageId}`);
+      toast({
+        title: response.data.message,
+        variant: "default",
+      });
+      setMessages(messages.filter((message) => message._id !== messageId));
+    } catch (error) {
+      const axiosError = error as AxiosError<ApiResponse>;
+      toast({
+        title: "Error",
+        description:
+          axiosError.response?.data.message ?? "Failed to delete message",
+        variant: "destructive",
+      });
+    }
   };
+
   const { data: session } = useSession();
+
   const form = useForm({
     resolver: zodResolver(AcceptMessageSchema),
   });
+
   const { register, watch, setValue } = form;
   const acceptMessages = watch("acceptMessages");
-  const fetchAcceptMessage = useCallback(async () => {
+
+  const fetchAcceptMessages = useCallback(async () => {
     setIsSwitchLoading(true);
     try {
-      const response = await axios.get("/api/accept-messages");
+      const response = await axios.get<ApiResponse>("/api/accept-messages");
       setValue("acceptMessages", response.data.isAcceptingMessage);
     } catch (error) {
       const axiosError = error as AxiosError<ApiResponse>;
       toast({
         title: "Error",
         description:
-          axiosError.response?.data.message ??
-          "Failed to fetch message settings",
+          axiosError.response?.data.message ?? "Failed to fetch message settings",
         variant: "destructive",
       });
     } finally {
@@ -53,15 +71,15 @@ const UserDashboard = () => {
 
   const fetchMessages = useCallback(
     async (refresh: boolean = false) => {
-      setLoading(true);
+      setIsLoading(true);
       setIsSwitchLoading(false);
       try {
-        const response = await axios.get("/api/get-messages");
+        const response = await axios.get<ApiResponse>("/api/get-messages");
         setMessages(response.data.messages || []);
         if (refresh) {
           toast({
-            title: "Message Freshing",
-            description: "Messages have been refreshed",
+            title: "Refreshed Messages",
+            description: "Showing latest messages",
           });
         }
       } catch (error) {
@@ -69,28 +87,31 @@ const UserDashboard = () => {
         toast({
           title: "Error",
           description:
-            axiosError.response?.data.message ??
-            "Failed to fetch message settings",
+            axiosError.response?.data.message ?? "Failed to fetch messages",
           variant: "destructive",
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
         setIsSwitchLoading(false);
       }
     },
-    [setLoading, setMessages, toast]
+    [setIsLoading, setMessages, toast]
   );
 
+  // Fetch initial state from the server
   useEffect(() => {
     if (!session || !session.user) return;
-    fetchMessages();
-    fetchAcceptMessage();
-  }, [session, setValue, fetchMessages, fetchAcceptMessage]);
 
+    fetchMessages();
+
+    fetchAcceptMessages();
+  }, [session, setValue, toast, fetchAcceptMessages, fetchMessages]);
+
+  // Handle switch change
   const handleSwitchChange = async () => {
     try {
       const response = await axios.post<ApiResponse>("/api/accept-messages", {
-        isAcceptingMessage: !acceptMessages,
+        acceptMessages: !acceptMessages,
       });
       setValue("acceptMessages", !acceptMessages);
       toast({
@@ -98,30 +119,33 @@ const UserDashboard = () => {
         variant: "default",
       });
     } catch (error) {
-      const AxiosError = error as AxiosError<ApiResponse>;
+      const axiosError = error as AxiosError<ApiResponse>;
       toast({
         title: "Error",
         description:
-          AxiosError.response?.data.message ??
-          "Failed to update message settings",
+          axiosError.response?.data.message ?? "Failed to update message settings",
         variant: "destructive",
       });
     }
   };
+
   if (!session || !session.user) {
-    return <div>Please login</div>;
+    return <div></div>;
   }
-  const {username} = session?.user as User;
+
+  const { username } = session.user as User;
+
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
   const profileUrl = `${baseUrl}/u/${username}`;
-  
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
     toast({
       title: "URL Copied!",
       description: "Profile URL has been copied to clipboard.",
     });
-  }
+  };
+
   return (
     <div className="my-8 mx-4 md:mx-8 lg:mx-auto p-6 bg-white rounded w-full max-w-6xl">
       <h1 className="text-4xl font-bold mb-4">User Dashboard</h1>
@@ -145,7 +169,7 @@ const UserDashboard = () => {
           {...register("acceptMessages")}
           checked={acceptMessages}
           onCheckedChange={handleSwitchChange}
-          disabled={isSwtichLoading}
+          disabled={isSwitchLoading}
         />
         <span className="ml-2">
           Accept Messages: {acceptMessages ? "On" : "Off"}
@@ -161,7 +185,7 @@ const UserDashboard = () => {
           fetchMessages(true);
         }}
       >
-        {loading ? (
+        {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <RefreshCcw className="h-4 w-4" />
@@ -182,6 +206,6 @@ const UserDashboard = () => {
       </div>
     </div>
   );
-};
+}
 
 export default UserDashboard;
