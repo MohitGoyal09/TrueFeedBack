@@ -113,7 +113,7 @@ const UserDashboard = () => {
   }
   const {username} = session?.user as User;
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
-  const profileUrl = `${baseUrl}/user/${username}`;
+  const profileUrl = `${baseUrl}/u/${username}`;
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
