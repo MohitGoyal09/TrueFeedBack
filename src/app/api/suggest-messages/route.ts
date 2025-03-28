@@ -1,13 +1,11 @@
-
-
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
 
 // Initialize Google AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
@@ -18,18 +16,17 @@ export async function POST(req: Request) {
     const response = await result.response;
     const text = response.text();
 
-    return NextResponse.json({ 
-      success: true, 
-      data: text 
+    return NextResponse.json({
+      success: true,
+      data: text,
     });
-
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error("Error:", error);
     return NextResponse.json(
-      { 
-        error: error.message || 'An error occurred while generating content',
-        details: error
-      }, 
+      {
+        error: error.message || "An error occurred while generating content",
+        details: error,
+      },
       { status: 500 }
     );
   }
